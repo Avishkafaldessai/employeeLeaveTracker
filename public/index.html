@@ -1,0 +1,386 @@
+<!doctype html>
+<html ng-app="leaveApp">
+<head>
+  <meta charset="utf-8" />
+  <title>LeaveHub — Overview</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <!-- AngularJS -->
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.3/angular.min.js"></script>
+  <!-- FullCalendar -->
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.0/main.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.0/main.min.js"></script>
+  <!-- Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  
+ <link rel="stylesheet" href="styles.css" />
+
+</head>
+<body ng-controller="MainCtrl as vm">
+  <!-- Top navigation -->
+  <header class="topbar">
+    <div class="left">
+      <button class="icon-btn" ng-click="vm.toggleSidebar()"><i class="fa fa-bars"></i></button>
+      <div class="brand">LeaveHub</div>
+      <nav class="tabs">
+        <button ng-class="{'active': vm.activeTab==='overview'}" ng-click="vm.setTab('overview')">Overview</button>
+        <button ng-class="{'active': vm.activeTab==='dashboard'}" ng-click="vm.setTab('dashboard')">Dashboard</button>
+      </nav>
+    </div>
+    <div class="right">
+      <div class="search">
+        <input type="text" ng-model="vm.searchText" placeholder="Search..." />
+        <i class="fa fa-search"></i>
+      </div>
+      <button class="icon-btn"><i class="fa fa-bell"></i></button>
+      <div class="avatar" title="{{vm.profile.employee_name}}">
+        <img ng-src="{{vm.profile.avatar || 'https://via.placeholder.com/40'}}" alt="avatar" />
+      </div>
+    </div>
+  </header>
+
+  <div class="app-shell">
+    <!-- Sidebar -->
+    <aside class="sidebar" ng-class="{'collapsed': vm.sidebarCollapsed, 'expanded': !vm.sidebarCollapsed}">
+      <ul class="menu">
+        <li ng-click="vm.setTab('overview')" ng-class="{'active': vm.activeTab==='overview'}">
+          <i class="fa fa-home"></i><span>Home</span>
+        </li>
+        <li ng-click="vm.setTab('dashboard')" ng-class="{'active': vm.activeTab==='dashboard'}">
+          <i class="fa fa-clipboard-list"></i><span>Leave Tracker</span>
+        </li>
+        <li ng-click="vm.setTab('calendar')" ng-class="{'active': vm.activeTab==='calendar'}">
+          <i class="fa fa-calendar"></i><span>Calendar</span>
+        </li>
+        <li ng-click="vm.setTab('reports')" ng-class="{'active': vm.activeTab==='reports'}">
+          <i class="fa fa-chart-line"></i><span>Reports</span>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Main -->
+    <main class="main" ng-class="{'expanded': vm.sidebarCollapsed}">
+      <!-- Overview -->
+      <section ng-show="vm.activeTab==='overview'" class="overview-grid">
+        <!-- Left column -->
+        <div class="col-left">
+          <div class="card profile-card">
+            <div class="profile-top">
+              <img class="avatar-lg" ng-src="{{vm.profile.avatar || 'https://sp-ao.shortpixel.ai/client/q_glossy,ret_img,w_300,h_300/https://gmpropertyservices.eu/wp-content/uploads/2018/10/check-in-check-out-9-300x300.gif'}}" alt="avatar" />
+              <div class="info">
+                <div class="id">{{vm.profile.employee_code}} · <strong>{{vm.profile.employee_name}}</strong></div>
+                <div class="role">{{vm.profile.role}}</div>
+              </div>
+            </div>
+            <div class="checkin">
+              <div class="status" ng-class="{'on': vm.checkedIn}">
+                <div ng-if="!vm.checkedIn" class="status-text">Yet to check-in</div>
+                <div ng-if="vm.checkedIn" class="status-text">Checked-in at {{vm.checkInTime}}</div>
+              </div>
+              <div class="checkin-actions">
+                <button class="btn primary" ng-if="!vm.checkedIn" ng-click="vm.toggleCheckIn()">Check-in</button>
+                <button class="btn secondary" ng-if="vm.checkedIn" ng-click="vm.toggleCheckIn()">Check-out</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h4>Apply for Leave</h4>
+            <form ng-submit="vm.applyLeave()" class="apply-form">
+              <label class="sr">Employee name</label>
+              <input type="text" ng-model="vm.newLeave.employee_name" placeholder="Employee name" required />
+              <div class="date-row">
+                <label>Start Date:</label>
+                <input type="date" ng-model="vm.newLeave.start_date" required />
+              
+                <label>End Date:</label>
+                <input type="date" ng-model="vm.newLeave.end_date" required />
+              </div>
+              <select ng-model="vm.newLeave.type">
+                <option>Casual</option>
+                <option>Sick</option>
+                <option>Paid</option>
+              </select>
+              <input type="text" ng-model="vm.newLeave.reason" placeholder="Reason (optional)" />
+              <div class="actions">
+                <button type="submit" class="btn primary">Apply</button>
+                <button type="button" class="btn neutral" ng-click="vm.clearForm()">Clear</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Center column -->
+        <div class="col-center">
+          <!-- Stats row -->
+          <div class="stats-row">
+            <div class="stat-card">
+              <div class="stat-title">Total Leaves</div>
+              <div class="stat-value">{{vm.stats.totalLeaves}}</div>
+              <div class="stat-sub muted">All time</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-title">Approved</div>
+              <div class="stat-value">{{vm.stats.approved}}</div>
+              <div class="stat-sub muted">Approved leaves</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-title">Pending</div>
+              <div class="stat-value">{{vm.stats.pending}}</div>
+              <div class="stat-sub muted">Awaiting action</div>
+            </div>
+            <div class="graph-card card">
+              <div class="graph-header">
+                <div class="graph-title">Leaves by Type</div>
+                <div class="muted small">Counts</div>
+              </div>
+              <div id="leaves-chart" class="leaves-chart" aria-hidden="true"></div>
+            </div>
+          </div>
+
+          <!-- Schedule -->
+          <div class="card schedule-card">
+            <div class="row-title">Work Schedule</div>
+            <div class="muted">{{vm.schedule.start_date || '—'}} — {{vm.schedule.end_date || '—'}}</div>
+            <div class="schedule-mini" id="mini-calendar"></div>
+          </div>
+
+          <!-- Inline tabs -->
+          <div class="card">
+            <div class="inline-tabs">
+              <button ng-click="vm.setSubTab('activities')" ng-class="{'active': vm.activeSubTab==='activities'}">Activities</button>
+              <button ng-click="vm.setSubTab('feeds')" ng-class="{'active': vm.activeSubTab==='feeds'}">Feeds</button>
+              <button ng-click="vm.setSubTab('profile')" ng-class="{'active': vm.activeSubTab==='profile'}">Profile</button>
+              <button ng-click="vm.setSubTab('approvals')" ng-class="{'active': vm.activeSubTab==='approvals'}">Approvals</button>
+              <button ng-click="vm.setSubTab('leave')" ng-class="{'active': vm.activeSubTab==='leave'}">Leave</button>
+            </div>
+
+            <div class="tab-content">
+              <!-- Activities -->
+              <div ng-if="vm.activeSubTab !== 'leave'">
+                <div class="activity-list">
+                  <div class="greeting">
+                    <div class="g-left"><i class="fa fa-sun"></i></div>
+                    <div>
+                      <div class="hi">Good Afternoon, {{vm.profile.employee_name}}</div>
+                      <div class="muted">Have a productive day!</div>
+                    </div>
+                  </div>
+                  <div class="card-row">
+                    <div>
+                      <div class="row-title">Check-in reminder</div>
+                      <div class="muted">Your shift has started</div>
+                    </div>
+                    <div class="meta">{{vm.schedule.shift_name || 'General'}} · {{vm.schedule.start_time || '09:00'}}-{{vm.schedule.end_time || '18:00'}}</div>
+                  </div>
+                  <div class="card-row">
+                    <div>
+                      <div class="row-title">Upcoming Holidays</div>
+                      <div class="muted">{{vm.holidays.length}} holidays</div>
+                    </div>
+                    <div class="meta">Next: {{vm.holidays[0]?.title || '—'}}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Leave Table -->
+              <div ng-if="vm.activeSubTab === 'leave'">
+                <div class="row-title">Recent Leaves</div>
+                <div class="table-wrap">
+                  <table class="table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Start</th>
+                        <th>End</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr ng-repeat="l in vm.leavesSorted">
+                        <td>{{l.employee_name}}</td>
+                        <td>{{vm.formatDisplayDate(l.start_date)}}</td>
+                        <td>{{vm.formatDisplayDate(l.end_date)}}</td>
+                        <td>{{l.type}}</td>
+                        <td>
+                          <span ng-if="l.status==='Approved'" style="color:var(--success);font-weight:600">
+                            <i class="fa fa-check-circle"></i> {{l.status}}
+                          </span>
+                          <span ng-if="l.status==='Pending'" style="color:var(--muted);font-weight:600">
+                            <i class="fa fa-clock"></i> {{l.status}}
+                          </span>
+                          <span ng-if="l.status!=='Approved' && l.status!=='Pending'" style="font-weight:600">
+                            {{l.status}}
+                          </span>
+                        </td>
+                        <td>
+                          <div class="action-btns">
+                            <button class="btn success small" ng-if="l.status==='Pending'" ng-click="vm.approveLeave(l)">
+                              <i class="fa fa-check"></i> Approve
+                            </button>
+                            <button class="btn danger small" ng-click="vm.deleteLeave(l)">
+                              <i class="fa fa-trash"></i> Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr ng-if="!vm.leavesSorted || vm.leavesSorted.length===0">
+                        <td colspan="6" class="muted" style="text-align:center">No leaves found</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Dashboard -->
+      <section ng-show="vm.activeTab==='dashboard'">
+        <div class="col-center">
+          <div class="stats-row">
+            <div class="stat-card">
+              <div class="stat-title">Total Leaves</div>
+              <div class="stat-value">{{vm.stats.totalLeaves}}</div>
+              <div class="stat-sub muted">All time</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-title">Approved</div>
+              <div class="stat-value">{{vm.stats.approved}}</div>
+              <div class="stat-sub muted">Approved leaves</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-title">Pending</div>
+              <div class="stat-value">{{vm.stats.pending}}</div>
+              <div class="stat-sub muted">Awaiting action</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="row-title">All Leaves</div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Start</th>
+                    <th>End</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr ng-repeat="l in vm.leavesSorted">
+                    <td>{{l.employee_name}}</td>
+                    <td>{{vm.formatDisplayDate(l.start_date)}}</td>
+                    <td>{{vm.formatDisplayDate(l.end_date)}}</td>
+                    <td>{{l.type}}</td>
+                    <td>
+                      <span ng-if="l.status==='Approved'" style="color:var(--success);font-weight:600">
+                        <i class="fa fa-check-circle"></i> {{l.status}}
+                      </span>
+                      <span ng-if="l.status==='Pending'" style="color:var(--muted);font-weight:600">
+                        <i class="fa fa-clock"></i> {{l.status}}
+                      </span>
+                      <span ng-if="l.status!=='Approved' && l.status!=='Pending'" style="font-weight:600">
+                        {{l.status}}
+                      </span>
+                    </td>
+                    <td>
+                      <div class="action-btns">
+                        <button class="btn success small" ng-if="l.status==='Pending'" ng-click="vm.approveLeave(l)">
+                          <i class="fa fa-check"></i> Approve
+                        </button>
+                        <button class="btn danger small" ng-click="vm.deleteLeave(l)">
+                          <i class="fa fa-trash"></i> Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr ng-if="!vm.leavesSorted || vm.leavesSorted.length===0">
+                    <td colspan="6" class="muted" style="text-align:center">No leaves found</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Calendar -->
+      <section ng-show="vm.activeTab==='calendar'">
+        <div class="card">
+          <h3>Full Calendar</h3>
+          <div id="calendar" style="min-height:600px"></div>
+        </div>
+      </section>
+
+      <!-- Reports -->
+      <section ng-show="vm.activeTab==='reports'">
+        <div class="card">
+          <h3>Reports</h3>
+          <p class="muted">Reports and analytics coming soon...</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Chatbot -->
+  <button class="chatbot-toggle" ng-click="vm.toggleChatbot()">
+    <i class="fa" ng-class="vm.chatbotOpen ? 'fa-times' : 'fa-comment'"></i>
+  </button>
+
+  <div class="chatbot-window" ng-class="{'hidden': !vm.chatbotOpen}">
+    <div class="chatbot-header">
+      <h4><i class="fa fa-robot"></i> LeaveHub Assistant</h4>
+      <button class="chatbot-close" ng-click="vm.toggleChatbot()">
+        <i class="fa fa-times"></i>
+      </button>
+    </div>
+
+    <div class="chatbot-messages" id="chatMessages">
+      <div class="chat-message bot">
+        <div class="chat-avatar"><i class="fa fa-robot"></i></div>
+        <div class="chat-bubble">
+          Hi! I'm your LeaveHub assistant. How can I help you today?
+          <div class="chat-quick-actions">
+            <button class="quick-action-btn" ng-click="vm.sendChatMessage('Check my leave balance')">
+              Leave Balance
+            </button>
+            <button class="quick-action-btn" ng-click="vm.sendChatMessage('Apply for leave')">
+              Apply Leave
+            </button>
+            <button class="quick-action-btn" ng-click="vm.sendChatMessage('View pending leaves')">
+              Pending Leaves
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-message" ng-repeat="msg in vm.chatMessages" ng-class="msg.type">
+        <div class="chat-avatar">
+          <i class="fa" ng-class="msg.type === 'bot' ? 'fa-robot' : 'fa-user'"></i>
+        </div>
+        <div class="chat-bubble" ng-bind-html="msg.text | trustHtml"></div>
+      </div>
+    </div>
+
+    <div class="chatbot-input">
+      <input type="text" 
+             ng-model="vm.chatInput" 
+             placeholder="Type your message..."
+             ng-keypress="vm.chatKeyPress($event)" />
+      <button ng-click="vm.sendChatMessage(vm.chatInput)">
+        <i class="fa fa-paper-plane"></i>
+      </button>
+    </div>
+  </div>
+
+  <footer class="footer">LeaveHub • © 2025</footer>
+  <script src="app.js"></script>
+</body>
+</html>
